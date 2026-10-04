@@ -1,0 +1,22 @@
+[project]
+name = "hybrid-search"
+version = "0.9.1"
+description = "BM25 and dense retrieval fused with reciprocal rank fusion"
+requires-python = ">=3.10"
+dependencies = [
+    "elasticsearch>=8.15.0",
+    "qdrant-client>=1.11.0",
+    "sentence-transformers>=3.0.0",
+    "fastapi>=0.115.0",
+    "uvicorn>=0.30.0",
+    "pandas>=2.2.0",
+    "numpy>=1.26.0",
+    "pydantic>=2.8.0",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.3.0", "ruff>=0.6.0"]
+bench = ["matplotlib>=3.9.0", "tabulate>=0.9.0"]
+
+[tool.ruff]
+line-length = 96
