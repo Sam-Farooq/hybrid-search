@@ -37,26 +37,36 @@ gets no extra say.
 enough that rank 1 and rank 2 sit close together (1/61 against 1/62), which
 is what stops one retriever dominating the fused list.
 
-## Where fusion actually earns its keep
+## Where fusion earns its keep
 
-`benchmarks/compare.py` splits the query set in two, and the split is the
-whole point:
+`benchmarks/compare.py` reports recall@10 for BM25 alone, dense alone, and
+fused, split by query class. The split is the point, not the totals.
 
-```
-class         n    bm25    dense    fused
-----------  ---  ------  -------  -------
-identifier    4   0.875    0.312    0.875
-natural       4   0.583    0.750    0.812
-```
+Dense retrieval degrades badly on identifiers. An embedding of `Article
+92(1)(c)` sits close to the embedding of every other article reference,
+because the model has learned that reference numbers look like each other and
+has no reason to encode which one this is. BM25 has the opposite property: it
+matches the literal token and does not care what it means.
 
-On natural-language questions dense wins and fusion adds a little. On
-anything containing an identifier (`Article 92(1)(c)`, an ISIN, `RTS 28 field
-14`) dense collapses, because an embedding of a reference number sits close
-to every other reference number. BM25 handles those exactly, and fusion means
-you do not have to classify the query first to pick a retriever.
+On natural-language questions the ordering reverses, and dense wins by
+understanding a question that shares no vocabulary with its answer.
 
-That second row is the reason this exists. A pure-vector search demo looks
-fine until someone pastes an ISIN into it.
+Fusion means you do not have to classify the query first to pick a retriever,
+which is the part that matters in a system where users type whatever they
+like. A pure-vector search demo looks fine until someone pastes an ISIN into
+it.
+
+### Running the benchmark
+
+`benchmarks/queries.jsonl` holds eight queries, four of each class, with the
+doc ids they should return. **The corpus is not included**, so the file is a
+template rather than a reproducible result: point it at your own documents,
+match the ids, and `python benchmarks/compare.py` prints the three-way
+comparison.
+
+I have deliberately not put numbers in this README. Eight queries is far too
+few to publish an average from, and a recall figure means nothing without the
+corpus it was measured over.
 
 ## Two details that cost recall if you get them wrong
 
@@ -97,10 +107,9 @@ normalisation.
 
 ## Rough edges
 
-- The benchmark corpus is not in the repo. The numbers above came from an
-  internal document set I cannot publish, and `benchmarks/queries.jsonl` has
-  the queries with the doc ids but no documents behind them. Reproducing the
-  table needs your own corpus.
+- Eight queries is a sketch, not an evaluation. A real comparison needs a
+  corpus and on the order of a hundred queries per class, which is the work
+  this repo has not done.
 - `weights` is plumbed through `HybridEngine` and never tuned. Equal weighting
   beat every hand-set pair I tried, which is either a real result or a sign
   the query set is too small to show a difference. Probably the latter.
