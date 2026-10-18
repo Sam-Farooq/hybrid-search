@@ -1,6 +1,6 @@
 [project]
 name = "hybrid-search"
-version = "0.9.1"
+version = "0.10.0"
 description = "BM25 and dense retrieval fused with reciprocal rank fusion"
 requires-python = ">=3.10"
 dependencies = [
@@ -17,6 +17,18 @@ dependencies = [
 [project.optional-dependencies]
 dev = ["pytest==9.1.1", "ruff==0.16.10"]
 bench = ["matplotlib>=3.9.0", "tabulate>=0.9.0"]
+
+[tool.pytest.ini_options]
+# benchmarks/ is tooling rather than part of the shipped package, and its
+# pure functions are still worth testing.
+pythonpath = ["benchmarks"]
+# The model tier is off unless asked for, so `pytest -q` downloads nothing.
+# `pytest -m model` runs it, `pytest -m ""` runs both.
+addopts = "--strict-markers -m 'not model and not network'"
+markers = [
+    "model: loads a real cross-encoder, which downloads weights on first run.",
+    "network: downloads a published corpus. Needs the internet, not a service.",
+]
 
 [tool.ruff]
 line-length = 96

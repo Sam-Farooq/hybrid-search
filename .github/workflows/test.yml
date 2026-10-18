@@ -9,7 +9,25 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with: {python-version: "3.11", cache: pip}
-      - run: pip install -e ".[dev]"
-      - run: ruff check src tests
-      # Fusion is pure and runs here. The retrievers need services and do not.
+      - run: pip install -e ".[dev,bench]"
+      # benchmarks/ is linted too. It was not, and two findings had been
+      # sitting there: an unused engine and a shebang on a file that was not
+      # executable.
+      - run: ruff check src tests benchmarks
+      # Fusion, the re-ranking stage and the resolution arithmetic are all
+      # pure and run here. The retrievers need services and do not.
       - run: pytest -q tests/
+
+  # The two tiers that need something from outside the process but not a
+  # service: one downloads a published corpus, the other loads a real
+  # cross-encoder. Both are deselected from the job above, so a contributor
+  # running `pytest -q` downloads nothing.
+  tiers:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.11", cache: pip}
+      - run: pip install -e ".[dev,bench]"
+      - name: corpus and cross-encoder
+        run: pytest -q -m "network or model" -rs tests/
