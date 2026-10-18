@@ -41,6 +41,10 @@ class FusedHit:
     ranks: dict[str, int]
     text: str = ""
     metadata: dict = field(default_factory=dict)
+    # Set by hybrid_search.rerank when a re-ranking stage ran, None when none
+    # did. Kept alongside rrf_score rather than replacing it, because the two
+    # disagreeing is the interesting case and overwriting hides it.
+    rerank_score: float | None = None
 
     @property
     def found_by_all(self) -> bool:

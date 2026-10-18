@@ -7,3 +7,8 @@ __pycache__/
 .DS_Store
 benchmarks/*.png
 .mypy_cache/
+
+# Downloaded evaluation corpora. Never committed: BEIR's datasets
+# carry their own licences and are not this repository's to redistribute.
+.corpus-cache/
+benchmarks/scifact*.jsonl

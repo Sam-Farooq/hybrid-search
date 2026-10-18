@@ -6,6 +6,8 @@ import logging
 
 from hybrid_search.dense import DenseIndex
 from hybrid_search.fusion import FusedHit, reciprocal_rank_fusion
+from hybrid_search.rerank import DEFAULT_RERANK_DEPTH, Reranker
+from hybrid_search.rerank import apply as apply_rerank
 from hybrid_search.sparse import SparseIndex
 
 log = logging.getLogger(__name__)
@@ -18,10 +20,16 @@ CANDIDATE_DEPTH = 50
 
 class HybridEngine:
     def __init__(self, sparse: SparseIndex, dense: DenseIndex,
-                 weights: dict[str, float] | None = None):
+                 weights: dict[str, float] | None = None,
+                 reranker: Reranker | None = None,
+                 rerank_depth: int = DEFAULT_RERANK_DEPTH):
         self.sparse = sparse
         self.dense = dense
         self.weights = weights or {}
+        # None means fusion is the final ordering, which is what this was
+        # before and is still the right default for a recall-shaped workload.
+        self.reranker = reranker
+        self.rerank_depth = rerank_depth
 
     async def index(self, docs: list[dict]) -> dict[str, int]:
         sparse_n, dense_n = await asyncio.gather(
@@ -52,4 +60,10 @@ class HybridEngine:
         if not runs:
             raise RuntimeError("both retrievers failed")
 
-        return reciprocal_rank_fusion(runs, weights=self.weights, limit=limit)
+        # Fuse the whole thing and truncate at the end rather than inside
+        # fusion. The reranker has to see the fused window, and a limit of 10
+        # applied before it would hand the model the ten documents RRF already
+        # liked, which is the ordering the re-ranking stage exists to doubt.
+        fused = reciprocal_rank_fusion(runs, weights=self.weights)
+        ordered = await apply_rerank(self.reranker, query, fused, depth=self.rerank_depth)
+        return ordered[:limit]
